@@ -1,0 +1,71 @@
+---
+- name: Create install folder
+  file:
+    state: directory
+    mode: 0755
+    path: "{{ oracle_install_dir }}"
+    group: oinstall
+    owner: oracle
+    recurse: yes
+
+- name: Unzip installers
+  unarchive: src={{ oracle_installers_dir }}/{{ item }} dest={{ oracle_install_dir }}
+  with_items:
+    - "{{ oracle_installer_f1 }}"
+    - "{{ oracle_installer_f2 }}"
+
+- name: Set ORACLE environment variable
+  become_user: oracle
+  become: yes
+  lineinfile: dest=/home/oracle/.bashrc state=present line="{{ item }}"
+  with_items:
+    - "TMP={{ oracle_temp }}; export TMP"
+    - "TMPDIR=$TMP; export TMPDIR"
+    - "DISPLAY=localhost:0.0; export DISPLAY"
+    - "ORACLE_HOSTNAME={{ ansible_hostname }}; export ORACLE_HOSTNAME"
+    - "ORACLE_UNQNAME={{ oracle_sid }}; export ORACLE_UNQNAME"
+    - "ORACLE_BASE={{ oracle_base_dir }}/oracle; export ORACLE_BASE"
+    - "ORACLE_HOME=$ORACLE_BASE/{{ oracle_product_dir }}/{{ oracle_db_home }}; export ORACLE_HOME"
+    - "ORACLE_SID={{ oracle_sid }}; export ORACLE_SID"
+    - "PATH=/usr/sbin:$PATH; export PATH"
+    - "PATH=$ORACLE_HOME/bin:$PATH; export PATH"
+    - "LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib; export LD_LIBRARY_PATH"
+    - "CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib; export CLASSPATH"
+
+- name: Generate the response for silent installation
+  template: src=db_install.rsp.j2 dest="{{ oracle_install_dir }}/db_install.rsp" owner=oracle group=oinstall
+
+#warnings regarding INS-32055 can fail the task, even though the oracle installation was sucefull
+- name: Install Oracle Silently
+  become_user: oracle
+  become: yes
+  command: "{{ oracle_install_dir }}/database/runInstaller -silent -force -ignoreSysPrereqs -ignorePrereq -waitforcompletion -responseFile {{ oracle_install_dir }}/db_install.rsp"
+  ignore_errors: yes
+  register: oracle_install
+
+- name: Execute DB home rfoot command
+  command: '{{ oracle_install_dir }}/root.sh'
+  when: oracle_install.stdout | regex_search('Successfully Setup Software', multiline=True, ignorecase=True)
+
+- name: Generate response file for listener slient creation
+  template: src=netca.rsp.j2 dest="{{ oracle_install_dir }}/netca.rsp" owner=oracle group=oinstall
+
+- name: Create listener Silently
+  become_user: oracle
+  become: yes
+  command: '{{ oracle_install_dir }}/bin/netca -silent -responseFile {{ oracle_install_dir }}/netca.rsp'
+  environment:
+    DISPLAY: localhost:0.0
+
+- name: Set Restart flag
+  lineinfile:
+    dest: '/etc/oratab'
+    regexp: '^{{ oracle_sid }}:{{ oracle_install_dir }}:N'
+    line: '{{ oracle_sid }}:{{ oracle_install_dir }}:Y'
+
+- name: Automate Oracle start/stop
+  template: src=dbora.j2 dest=/etc/init.d/dbora mode=750
+
+- name: Enable DB start on Server startup
+  command: 'chkconfig --add dbora'
+  when: oracle_auto_start

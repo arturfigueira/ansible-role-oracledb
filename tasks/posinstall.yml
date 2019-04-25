@@ -1,0 +1,16 @@
+---
+- name: Clean Up rsp files
+  file:
+    path: "{{ oracle_install_dir }}/{{ item }}"
+    state: absent
+  with_items:
+    - db_install.rsp
+    - netca.rsp
+
+- name: Clean Up installation zip files
+  file:
+    path: "{{ oracle_installers_dir }}/{{ item }}"
+    state: absent
+  with_items:
+    - "{{ oracle_installer_f1 }}"
+    - "{{ oracle_installer_f2 }}"
