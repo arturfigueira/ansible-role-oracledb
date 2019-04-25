@@ -1,0 +1,39 @@
+---
+- name: Install Require Packages
+  yum: name={{ item }} state=present
+  with_items:
+    - libselinux-python
+    - unzip
+
+- name: Recover Yum repo template
+  get_url:
+    url: "{{ oracle_yum_repo_template_url }}/{{ oracle_yum_repo_name }}"
+    dest: /etc/yum.repos.d
+
+- name: Use HTTP for yum repo
+  replace:
+    path: "/etc/yum.repos.d/{{ oracle_yum_repo_name }}"
+    regexp: 'https'
+    replace: 'http'
+  when: "{{ oracle_yum_repo_usehttps }}"
+
+- name: Enable/Disable gpgcheck
+  replace:
+    path: "/etc/yum.repos.d/{{ oracle_yum_repo_name }}"
+    regexp: '(gpgcheck=)\d'
+    replace: '\g<1>{{ oracle_yum_repo_gpgcheck }}'
+
+- name: Install all Oracle dependencies
+  yum: name=oracle-rdbms-server-11gR2-preinstall state=present
+
+- name: Set up nproc
+  replace:
+    regexp: '^\*\s*soft\s*nproc\s*1024$'
+    replace: '* - nproc 16384'
+    path: /etc/security/limits.d/90-nproc.conf
+
+- name: Disable setenforce
+  command: /usr/sbin/setenforce 0
+
+- name:  Change SELINUX to permissive
+  selinux: policy=targeted state=disabled

@@ -1,0 +1,40 @@
+---
+#Dependencies Repository
+oracle_yum_repo_name: public-yum-ol6.repo
+oracle_yum_repo_template_url: http://public-yum.oracle.com
+oracle_yum_repo_gpgcheck: 1
+oracle_yum_repo_usehttps: true
+
+#Install folder
+oracle_temp: /tmp
+oracle_db_home: db_1
+oracle_base_dir: /u01/app
+oracle_product_dir: product/11.2.0
+oracle_install_dir: "{{ oracle_base_dir }}/oracle/{{ oracle_product_dir }}/{{ oracle_db_home }}"
+
+#Installers
+oracle_installers_dir: /tmp
+oracle_installer_f1: linux.x64_11gR2_database_1of2.zip
+oracle_installer_f2: linux.x64_11gR2_database_2of2.zip
+
+#Database settings
+oracle_sid: DB11G
+oracle_http_port: 8080
+oracle_listener_port: 1521
+oracle_db_syspwd: 1QA2w3e4r5t6y
+oracle_db_oper_group: dba
+oracle_db_mem: "{{ ( ansible_memtotal_mb * 10 ) // 25 }}"
+oracle_auto_start: false
+
+# It can be one of the following:
+# AL32UTF8, WE8ISO8859P15, WE8MSWIN1252, EE8ISO8859P2,
+# EE8MSWIN1250, NE8ISO8859P10, NEE8ISO8859P4, BLT8MSWIN1257,
+# BLT8ISO8859P13, CL8ISO8859P5, CL8MSWIN1251, AR8ISO8859P6,
+# AR8MSWIN1256, EL8ISO8859P7, EL8MSWIN1253, IW8ISO8859P8,
+# IW8MSWIN1255, JA16EUC, JA16EUCTILDE, JA16SJIS, JA16SJISTILDE,
+# KO16MSWIN949, ZHS16GBK, TH8TISASCII, ZHT32EUC, ZHT16MSWIN950,
+# ZHT16HKSCS, WE8ISO8859P9, TR8MSWIN1254, VN8MSWIN1258
+oracle_charset: AL32UTF8
+
+#Clean Up Installation files and leftovers
+oracle_cleanup_install: true

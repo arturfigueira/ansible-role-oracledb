@@ -1,0 +1,5 @@
+---
+- include: preinstall.yml
+- include: install.yml
+- include: posinstall.yml
+  when: oracle_cleanup_install
